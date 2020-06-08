@@ -5,15 +5,16 @@ In order to get this to work, clone this repo, then run `composer install` then 
 1. Around line 2314, Unprivileged or comment out the `private function __clone() {}` so the base can be cloned(**It's just a temporary alternative**).
 2. Use：`cd bin && php Fs 127.0.0.1 9501`
 
-# take care
+# Take care
 Please be aware you need to install swoole first. Also you **MUST** disable xdebug in order for swoole to run properly.
-MongoDB 没法一键协程化，没法将同步 IO 变为异步 IO 的,关闭 enable_coroutine，
-不支持 set_exception_handler，必须使用 try/catch 方式处理异常；
 
-同理，使用类静态变量 Class::$array、全局对象属性 $object->array、其他超全局变量 $GLOBALS 等，进行上下文保存在协程程序中是非常危险的。可能会出现不符合预期的行为。
+# Make
+1. MongoDB 没法一键协程化，没法将同步 IO 变为异步 IO 的,关闭 enable_coroutine，
+2. 不支持 set_exception_handler，必须使用 try/catch 方式处理异常；
 
-因此引入类 / 函数的 php 文件时必须要使用 include_once 或 require_once，否则会发生 cannot redeclare function/class 的致命错误。
+3. 使用类静态变量 Class::$array、全局对象属性 $object->array、其他超全局变量 $GLOBALS 等，进行上下文保存在协程程序中是非常危险的。可能会出现不符合预期的行为。
 
+4. 因此引入类 / 函数的 php 文件时必须要使用 include_once 或 require_once，否则会发生 cannot redeclare function/class 的致命错误。
 
 # Test
 Here are some preliminary benchmarks using `ab -n 6000 -c 500 http://localhost:9501/hey`
