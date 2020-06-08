@@ -5,24 +5,34 @@ namespace App;
 use \Swoole\HTTP\Server;
 use \Swoole\HTTP\Request;
 use \Swoole\HTTP\Response;
+use \Swoole\Coroutine;
 
 class swooleHttpServer extends \Prefab {
 
+	protected
+		//! Framework instance
+		$fw;
+
 	public function __construct(Server $server) {
+		$this->atomic = new \Swoole\Atomic(1); // 进程隔离
+		$this->fw = \Base::instance();
 		$this->set($server);
 		$this->register($server);
 	}
 
 	private function set(Server $server) {
+
 		$server->set(array(
 			'reactor_num'   => 16,	 // reactor thread num
 			'worker_num'	=> 16,	 // worker process num
 			'backlog'	   => 128,   // listen backlog
+			'task_worker_num'=> 4,
 			'max_request'   => 50,
 			'dispatch_mode' => 1,
 		));
 	}
 	private function register(Server $server) {
+
 		$server->on('start', [$this, 'onStart']);
 		$server->on('receive', [$this, 'onReceive']);
 		$server->on('task', [$this, 'onTask']);
@@ -32,12 +42,14 @@ class swooleHttpServer extends \Prefab {
 	}
 
 	private function debug(string $message) {
+
 		$date = date('Y-m-d H:i:s');
 		$memory = round(memory_get_usage(true) / 1000 / 1000, 3) . ' MB';
 		fwrite(STDOUT, $date . ' | ' . $memory . ' | ' . $message . "\n");
 	}
 
 	public function onStart(Server $server) {
+
 		$this->debug(sprintf('Swoole http server is started at http://%s:%s', $server->host, $server->port), PHP_EOL);
 	}
 
@@ -65,33 +77,49 @@ class swooleHttpServer extends \Prefab {
 	 * Results of processing asynchronous tasks (this callback function is executed in the worker process)
 	 */
 	public function onFinish($http, $task_id, $data) {
+
 		echo "AsyncTask[$task_id] Finish: $data".PHP_EOL;
 	}
 	public function onShutdown(Server $server) {
+
 		$this->debug('Swoole http server Shutting down');
 	}
 
 	public function onRequest(Request $swooleRequest, Response $swooleResponse) {
-		// if ($request->server['path_info'] == '/favicon.ico' || $request->server['request_uri'] == '/favicon.ico') {
-		// 	$response->end();
+
+		// if ($swooleRequest->server['path_info'] == '/favicon.ico' || $swooleRequest->server['request_uri'] == '/favicon.ico') {
+		// 	$swooleResponse->end();
 		// 	return;
 		// }
 
-		\Base::instance()->set('ONREROUTE',function($url,$permanent) use ($swooleResponse) { 
-			$swooleResponse->redirect($url); 
-		});
+		// \co::sleep(2.2); // Test 
 		$this->process($swooleRequest, $swooleResponse);
-		$swooleResponse->end();
+		$swooleResponse->end($this->atomic->add(1));// 进程隔离
+		// $swooleResponse->end();// 没有进程隔离
 	}
 
-	public function process(\Swoole\HTTP\Request $swooleRequest, \Swoole\HTTP\Response $swooleResponse) {
+	public function process(Request $swooleRequest, Response $swooleResponse) {
 
-		$processed_fw = $this->convertToFatFreeRequest($swooleRequest);
-		$this->convertToSwooleResponse($swooleResponse, $processed_fw);
+		\go(function() {
+			\co::sleep(1.0);
+			echo "co[1] end\n";
+		});
+		\go(function () {
+			\co::sleep(3.0);
+			echo "co[2] end\n";
+		});
+	    // list($controller, $action) = explode('/', trim($swooleRequest->server['request_uri'], '/'));
+	    // //根据 $controller, $action 映射到不同的控制器类和方法
+	    // (new $controller)->$action($swooleRequest, $swooleResponse);
+		\go(function () use ($swooleRequest, $swooleResponse) {
+			$processed_fw = $this->convertToFatFreeRequest($swooleRequest, $swooleResponse);
+			$this->convertToSwooleResponse($swooleResponse, $processed_fw);
+		});
+
 	}
 
-	protected function convertToFatFreeRequest(\Swoole\HTTP\Request $swooleRequest) {
-		$this->fw = \Base::instance();
+	protected function convertToFatFreeRequest(Request $swooleRequest, Response $swooleResponse) {
+
 		$processed_fw = clone $this->fw;
 		// $processed_fw = $this->fw->recursive($this->fw, function($val){
 		// 	return $val;
@@ -125,7 +153,9 @@ class swooleHttpServer extends \Prefab {
 		$uri=parse_url((preg_match('/^\w+:\/\//',$_SERVER['REQUEST_URI'])?'':
 				$scheme.'://'.$_SERVER['SERVER_NAME']).$_SERVER['REQUEST_URI']);
 		$path=preg_replace('/^'.preg_quote($base,'/').'/','',$uri['path']);
-
+		$error=function($url,$permanent) use ($swooleResponse) { 
+			$swooleResponse->redirect($url); 
+		};
 
 		$val = [
 		'HEADERS' => &$headers,
@@ -142,8 +172,10 @@ class swooleHttpServer extends \Prefab {
 		'SEED' => $processed_fw->hash($_SERVER['SERVER_NAME'].$base),
 		'TIME' => &$_SERVER['REQUEST_TIME_FLOAT'],
 		'URI' => &$_SERVER['REQUEST_URI'],
-		'VERB' => &$_SERVER['REQUEST_METHOD']
+		'VERB' => &$_SERVER['REQUEST_METHOD'],
+		'ONREROUTE' => &$error
 		];
+
 		foreach ($val as $hive => $value) {
 			$$hive = &$processed_fw->ref($hive);
 			$$hive = $value;
@@ -158,7 +190,7 @@ class swooleHttpServer extends \Prefab {
 		return $processed_fw;
 	}
 
-	protected function convertToSwooleResponse(\Swoole\HTTP\Response $swooleResponse, \Base $processed_fw) {
+	protected function convertToSwooleResponse(Response $swooleResponse, \Base $processed_fw) {
 		if(!empty($processed_fw->RESPONSE)) {
 			$swooleResponse->header('Content-Length', (string) strlen($processed_fw->RESPONSE));
 			$swooleResponse->header('Server', (string) $processed_fw->PACKAGE);

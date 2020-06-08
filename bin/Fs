@@ -87,6 +87,8 @@ require_once(DIR_PUBLIC.'/index.php');
 	)
 */
 
+
+// $http = new \Swoole\Http\Server("127.0.0.1", 9501, SWOOLE_PROCESS);
 $http = new \Swoole\Http\Server("127.0.0.1", 9501);
 
 new \App\swooleHttpServer($http);

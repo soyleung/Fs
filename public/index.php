@@ -78,7 +78,7 @@ call_user_func(function ($f3) {
 	    echo json_encode([ 'some' => 'array', 'here' => 'would', 'be' => 'cool' ])."\n"; 
 	});
 	// print_r($f3->get('AUTOLOAD'));
-	// Guide::instance();
+	Guide::instance();
 	$f3->route('GET /auth',function($f3){
 		var_dump($f3->REQUEST);
 		if (PHP_SAPI == 'cli') {
