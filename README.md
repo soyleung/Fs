@@ -9,12 +9,11 @@ In order to get this to work, clone this repo, then run `composer install` then 
 Please be aware you need to install swoole first. Also you **MUST** disable xdebug in order for swoole to run properly.
 
 # Make
-1. MongoDB 没法一键协程化，没法将同步 IO 变为异步 IO 的,关闭 enable_coroutine，
-2. 不支持 set_exception_handler，必须使用 try/catch 方式处理异常；
-
-3. 使用类静态变量 Class::$array、全局对象属性 $object->array、其他超全局变量 $GLOBALS 等，进行上下文保存在协程程序中是非常危险的。可能会出现不符合预期的行为。
-
-4. 因此引入类 / 函数的 php 文件时必须要使用 include_once 或 require_once，否则会发生 cannot redeclare function/class 的致命错误。
+1. MongoDB can't work, close `enable_coroutine`.
+2. Not Supported: `set_exception_handler`, **must be** use `try/catch`to handle exceptions.
+3. Using static class ariable `class::$array`, global object attribute `$object->array`, and other super global variable `$GLOBALS`,  is very dangerous. 
+Etc. to save context in a cooperation program.
+4. importing PHP files of classes / functions **must be** use include_once or require_once, otherwise a fatal error: cannot redeclare function/class!
 
 # Test
 Here are some preliminary benchmarks using `ab -n 6000 -c 500 http://localhost:9501/hey`
