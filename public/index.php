@@ -19,18 +19,18 @@ function modification($filename) {
 	return $filename;
 }
 
-function library($class) {
-	defined('DIR_SYSTEM') or define('DIR_SYSTEM', '../system/');
-	$file = DIR_SYSTEM . 'library/' . str_replace('\\', '/', strtolower($class)) . '.php';
-	if (is_file($file)) {
-		include_once(modification($file));
-		return true;
-	} else {
-		return false;
-	}
-}
+spl_autoload_register(function($class){
 
-spl_autoload_register('library');
+	defined('DIR_SYSTEM') or define('DIR_SYSTEM', '../system/');
+
+	$file = [
+		$class => DIR_SYSTEM . 'library/' . str_replace('\\', '/', strtolower($class)) . '.php',
+	];
+	if (isset($file[$class])) {
+		include_once(modification($file[$class]));
+		return true;
+	}
+}, TRUE, TRUE);
 // spl_autoload_extensions('.php');
 
 call_user_func(function ($f3) {
