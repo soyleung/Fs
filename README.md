@@ -1,4 +1,13 @@
-First of all, thank to @n0nag0n come from the USA。
+First of all, thank to @n0nag0n come from the USA.
+This is an idea project. I want to write Write high performance and high concurrency services such as TCP, UDP, UNIX socket, HTTP, websocket, etc., so that PHP is no longer limited to the web domain.
+@n0nag0n, His project gave me good ideas, but the ideas were incomplete. So this project is incomplete. It's just a test. It cannot be used completely.
+1. The FatFree framework is very good, but when combined with Swoole, it is obviously bloated, so FatFree must be better used in the CLI, we will change it in new projects.
+2. The project can no longer be limited to one server, or when we use thousands of servers to run the project, there is a lack of server integration and control. We will solve it in new projects.
+3. ...
+4. ...
+
+New: https://github.com/DpodoNetwork/DSF
+
 # Write high performance and high concurrency services such as TCP, UDP, UNIX socket, HTTP, websocket, etc., so that PHP is no longer limited to the web domain.
 
 **Work on Fatfree Froframework**
